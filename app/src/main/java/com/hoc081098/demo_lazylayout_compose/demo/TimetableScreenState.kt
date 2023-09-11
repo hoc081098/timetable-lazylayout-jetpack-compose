@@ -99,10 +99,10 @@ internal class TimetableScreenState(
     }
 
     val perHourHeightPx = perMinuteHeightPx * Duration.ofHours(1).toMinutes()
-    val numberOfHoursPerDay = Duration.ofDays(1).toHours().toInt()
+    val hourRange = 1..<Duration.ofDays(1).toHours().toInt()
     timelineHorizontalLines = derivedStateOf {
       val offsetY = scrollStates.offsetY
-      (1..<numberOfHoursPerDay).map { perHourHeightPx * it - offsetY }
+      hourRange.map { perHourHeightPx * it - offsetY }
     }
 
     dayVerticalLines = derivedStateOf {

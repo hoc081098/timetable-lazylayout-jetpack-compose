@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,25 +50,24 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
 
     val timetableEventList = getTimetableEventItemsList()
-
+    val itemShape = RoundedCornerShape(size = 12.dp)
 
     setContent {
       DemoLazyLayoutComposeTheme(
         dynamicColor = false,
       ) {
         // A surface container using the 'background' color from the theme
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Surface(
+          modifier = Modifier.fillMaxSize(),
+          color = MaterialTheme.colorScheme.background,
+        ) {
           Scaffold(
             topBar = {
               CenterAlignedTopAppBar(
-                title = {
-                  Text(text = "Timetable")
-                }
+                title = { Text(text = "Timetable") }
               )
             },
           ) { padding ->
-            val shape = RoundedCornerShape(size = 12.dp)
-
             Timetable(
               modifier = Modifier
                 .consumeWindowInsets(padding)
@@ -75,42 +75,56 @@ class MainActivity : ComponentActivity() {
                 .fillMaxSize(),
               timetableEventList = timetableEventList
             ) { index, item ->
-              Column(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .padding(8.dp)
-                  .border(
-                    color = Colors[index % Colors.size],
-                    width = 2.dp,
-                    shape = shape,
-                  )
-                  .background(
-                    color = Colors[index % Colors.size].copy(alpha = 0.2f),
-                    shape = shape,
-                  )
-                  .padding(8.dp),
-              ) {
-                Text(
-                  modifier = Modifier
-                    .fillMaxWidth(),
-                  text = item.title,
-                  style = MaterialTheme.typography.titleLarge,
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                val duration = ChronoUnit.MINUTES.between(item.startsAt, item.endsAt)
-                Text(
-                  modifier = Modifier
-                    .fillMaxWidth(),
-                  text = "Duration: $duration minutes",
-                  style = MaterialTheme.typography.bodyMedium
-                )
-              }
+              EventItem(
+                index = index,
+                shape = itemShape,
+                item = item,
+              )
             }
           }
         }
       }
+    }
+  }
+
+  @Composable
+  private fun EventItem(
+    index: Int,
+    shape: RoundedCornerShape,
+    item: TimetableEventItem,
+    modifier: Modifier = Modifier,
+  ) {
+    Column(
+      modifier = modifier
+        .fillMaxWidth()
+        .padding(8.dp)
+        .border(
+          color = Colors[index % Colors.size],
+          width = 2.dp,
+          shape = shape,
+        )
+        .background(
+          color = Colors[index % Colors.size].copy(alpha = 0.2f),
+          shape = shape,
+        )
+        .padding(8.dp),
+    ) {
+      Text(
+        modifier = Modifier
+          .fillMaxWidth(),
+        text = item.title,
+        style = MaterialTheme.typography.titleLarge,
+      )
+
+      Spacer(modifier = Modifier.height(12.dp))
+
+      val duration = ChronoUnit.MINUTES.between(item.startsAt, item.endsAt)
+      Text(
+        modifier = Modifier
+          .fillMaxWidth(),
+        text = "Duration: $duration minutes",
+        style = MaterialTheme.typography.bodyMedium
+      )
     }
   }
 }

@@ -56,6 +56,7 @@ dependencies {
   implementation(libs.ui)
   implementation(libs.ui.graphics)
   implementation(libs.ui.tooling.preview)
+  implementation(libs.ui.util)
   implementation(libs.material3)
 
   implementation(libs.kotlinx.collections.immutable)

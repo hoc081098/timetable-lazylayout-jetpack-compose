@@ -42,6 +42,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.fastMap
 import com.hoc081098.demo_lazylayout_compose.DateFormatter
 import com.hoc081098.demo_lazylayout_compose.EventDay
 import com.hoc081098.demo_lazylayout_compose.TimetableEventItem
@@ -181,7 +183,7 @@ fun Timetable(
           .clipToBounds()
           .background(backgroundColor)
           .drawBehind {
-            screenState.timelineHorizontalLines.value.forEach { y ->
+            screenState.timelineHorizontalLines.value.fastForEach { y ->
               drawLine(
                 color = lineColor,
                 start = Offset(0f, y),
@@ -189,7 +191,7 @@ fun Timetable(
                 strokeWidth = timelineStrokeWidthPx,
               )
             }
-            screenState.dayVerticalLines.value.forEach { x ->
+            screenState.dayVerticalLines.value.fastForEach { x ->
               drawLine(
                 color = lineColor,
                 start = Offset(x, 0f),
@@ -225,7 +227,7 @@ fun Timetable(
         screenState.updateScreenConstraints(constraints)
 
         // measure visible items
-        val placeableInfos = screenState.visibleTimetableEventItemLayoutInfos.value.map { layoutInfo ->
+        val placeableInfos = screenState.visibleTimetableEventItemLayoutInfos.value.fastMap { layoutInfo ->
           PlaceableInfo(
             placeable = measure(
               index = layoutInfo.index,
@@ -233,14 +235,14 @@ fun Timetable(
                 width = layoutInfo.widthPx,
                 height = layoutInfo.heightPx
               )
-            ).first(),
+            )[0],
             layoutInfo = layoutInfo,
           )
         }
 
         layout(constraints.maxWidth, constraints.maxHeight) {
           // place
-          placeableInfos.forEach { (placeable, layoutInfo) ->
+          placeableInfos.fastForEach { (placeable, layoutInfo) ->
             placeable.place(
               x = (layoutInfo.leftPx - screenState.offsetX).toInt(),
               y = (layoutInfo.topPx - screenState.offsetY).toInt(),
