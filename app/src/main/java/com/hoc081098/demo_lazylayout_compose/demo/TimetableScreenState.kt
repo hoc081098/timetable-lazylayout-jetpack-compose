@@ -75,25 +75,27 @@ internal class TimetableScreenState(
     totalHeightPx = timetableEventItemLayoutInfos.maxOf { it.bottomPx }
 
     visibleTimetableEventItemLayoutInfos = derivedStateOf {
-      val size = screenSizeState.value
-      val offsetX = scrollStates.offsetX
-      val offsetY = scrollStates.offsetY
-
-      if (size == IntSize.Zero) {
-        return@derivedStateOf emptyList()
-      }
-
       // The visible items are the items that are inside the screen.
       // It will be calculated when any of the following changes:
       // - [scrollX]
       // - [scrollY]
       // - [size]
+
+      val size = screenSizeState.value
+      if (size == IntSize.Zero) {
+        return@derivedStateOf emptyList()
+      }
+
+      val offsetX = scrollStates.offsetX
+      val offsetY = scrollStates.offsetY
+
+      val screenXRange = offsetX..offsetX + size.width
+      val screenYRange = offsetY..offsetY + size.height
+
       timetableEventItemLayoutInfos.filter {
         it.isVisible(
-          offsetX = offsetX,
-          offsetY = offsetY,
-          screenWidth = size.width,
-          screenHeight = size.height,
+          screenXRange = screenXRange,
+          screenYRange = screenYRange,
         )
       }
     }
@@ -129,32 +131,23 @@ internal class TimetableScreenState(
     )
   }
 
-  internal suspend fun scroll(change: PointerInputChange, dragAmount: Offset) {
-    scrollStates.scroll(change, dragAmount)
-  }
+  internal suspend fun scroll(change: PointerInputChange, dragAmount: Offset) = scrollStates.scroll(change, dragAmount)
 
-  internal suspend fun fling() {
-    scrollStates.fling()
-  }
+  internal suspend fun fling() = scrollStates.fling()
 
-  internal fun resetScrollTracking() {
-    scrollStates.resetScrollTracking()
-  }
+  internal fun resetScrollTracking() = scrollStates.resetScrollTracking()
 }
 
-private fun TimetableEventItemLayoutInfo.isVisible(
-  @Px offsetX: Float,
-  @Px offsetY: Float,
-  @Px screenWidth: Int,
-  @Px screenHeight: Int,
+@Suppress("NOTHING_TO_INLINE")
+private inline fun TimetableEventItemLayoutInfo.isVisible(
+  screenXRange: ClosedFloatingPointRange<Float>,
+  screenYRange: ClosedFloatingPointRange<Float>
 ): Boolean {
-  val screenX = offsetX..(offsetX + screenWidth)
-  val screenY = offsetY..(offsetY + screenHeight)
+  val xInside = leftPx.toFloat() in screenXRange ||
+      rightPx.toFloat() in screenXRange
 
-  val xInside = leftPx.toFloat() in screenX ||
-      rightPx.toFloat() in screenX
-  val yInside = topPx.toFloat() in screenY ||
-      bottomPx.toFloat() in screenY
+  val yInside = topPx.toFloat() in screenYRange ||
+      bottomPx.toFloat() in screenYRange
 
   return xInside && yInside
 }
