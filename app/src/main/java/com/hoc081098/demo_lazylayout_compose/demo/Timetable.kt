@@ -101,7 +101,7 @@ fun Timetable(
     itemProvider(
       itemCount = { items.size },
       itemContent = { content(it, items[it]) },
-      key = { items[it].id }
+      key = { items[it].id.value }
     )
   }
 
