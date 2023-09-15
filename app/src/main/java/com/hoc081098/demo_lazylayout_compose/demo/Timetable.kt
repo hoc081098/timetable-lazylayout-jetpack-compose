@@ -100,7 +100,8 @@ fun Timetable(
   val itemProvider = remember(items) {
     itemProvider(
       itemCount = { items.size },
-      itemContent = { content(it, items[it]) }
+      itemContent = { content(it, items[it]) },
+      key = { items[it].id }
     )
   }
 
