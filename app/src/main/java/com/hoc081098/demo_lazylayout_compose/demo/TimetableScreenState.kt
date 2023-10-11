@@ -12,9 +12,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import com.hoc081098.demo_lazylayout_compose.TimetableEventList
+import com.hoc081098.demo_lazylayout_compose.fastFilter
 import java.time.Duration
 
-@OptIn(ExperimentalStdlibApi::class)
 @Stable
 internal class TimetableScreenState(
   private val timetableEventList: TimetableEventList,
@@ -58,28 +58,57 @@ internal class TimetableScreenState(
   init {
     val columnWidthPx = density.run { columnWidth.roundToPx() }
     val perMinuteHeightPx = density.run { perMinuteHeight.roundToPx() }
+    val dayIndices = timetableEventList.days.associateWithIndex()
+
+    // Avoid looping many times.
+    var maxRightPx = -1
+    var maxBottomPx = -1
 
     val timetableEventItemLayoutInfos = timetableEventList
       .items
-      .mapIndexed { index, item ->
+      .mapIndexedTo(ArrayList()) { index, item ->
         TimetableEventItemLayoutInfo(
           item = item,
           index = index,
-          dayIndex = timetableEventList.days.indexOf(item.day),
+          dayIndex = dayIndices[item.day]!!,
           columnWidthPx = columnWidthPx,
           perMinuteHeightPx = perMinuteHeightPx,
-        )
+        ).also {
+          maxRightPx = maxOf(maxRightPx, it.rightPx)
+          maxBottomPx = maxOf(maxBottomPx, it.bottomPx)
+        }
       }
 
-    totalWidthPx = timetableEventItemLayoutInfos.maxOf { it.rightPx }
-    totalHeightPx = timetableEventItemLayoutInfos.maxOf { it.bottomPx }
+    totalWidthPx = maxRightPx
+    totalHeightPx = maxBottomPx
 
-    visibleTimetableEventItemLayoutInfos = derivedStateOf {
+    visibleTimetableEventItemLayoutInfos = buildVisibleTimetableEventItemLayoutInfos(timetableEventItemLayoutInfos)
+
+    timelineHorizontalLines = buildTimelineHorizontalLines(perMinuteHeightPx)
+    dayVerticalLines = derivedStateOf {
+      val offsetX = scrollStates.offsetX
+      List(timetableEventList.days.size) { columnWidthPx * it - offsetX }
+    }
+  }
+
+  //region Private
+  private fun buildTimelineHorizontalLines(perMinuteHeightPx: Int): State<List<Float>> {
+    val perHourHeightPx = perMinuteHeightPx * Duration.ofHours(1).toMinutes()
+    val hourRange = 1..<Duration.ofDays(1).toHours().toInt()
+
+    return derivedStateOf {
+      val offsetY = scrollStates.offsetY
+      hourRange.map { perHourHeightPx * it - offsetY }
+    }
+  }
+
+  private fun buildVisibleTimetableEventItemLayoutInfos(timetableEventItemLayoutInfos: ArrayList<TimetableEventItemLayoutInfo>) =
+    derivedStateOf {
       // The visible items are the items that are inside the screen.
       // It will be calculated when any of the following changes:
-      // - [scrollX]
-      // - [scrollY]
-      // - [size]
+      // - [offsetX]
+      // - [offsetY]
+      // - [screenSizeState]
 
       val size = screenSizeState.value
       if (size == IntSize.Zero) {
@@ -89,29 +118,24 @@ internal class TimetableScreenState(
       val offsetX = scrollStates.offsetX
       val offsetY = scrollStates.offsetY
 
-      val screenXRange = offsetX..offsetX + size.width
-      val screenYRange = offsetY..offsetY + size.height
+      val screenRightX = offsetX + size.width
+      val screenBottomY = offsetY + size.height
 
-      timetableEventItemLayoutInfos.filter {
-        it.isVisible(
-          screenXRange = screenXRange,
-          screenYRange = screenYRange,
-        )
+      // filter items that are visible (or partially visible) in the screen
+      timetableEventItemLayoutInfos.fastFilter {
+        (
+            /** x is inside the screen */
+            it.leftPx.toFloat() in offsetX..screenRightX ||
+                it.rightPx.toFloat() in offsetX..screenRightX
+            )
+            && (
+            /** y is inside the screen */
+            it.topPx.toFloat() in offsetY..screenBottomY ||
+                it.bottomPx.toFloat() in offsetY..screenBottomY
+            )
       }
     }
-
-    val perHourHeightPx = perMinuteHeightPx * Duration.ofHours(1).toMinutes()
-    val hourRange = 1..<Duration.ofDays(1).toHours().toInt()
-    timelineHorizontalLines = derivedStateOf {
-      val offsetY = scrollStates.offsetY
-      hourRange.map { perHourHeightPx * it - offsetY }
-    }
-
-    dayVerticalLines = derivedStateOf {
-      val offsetX = scrollStates.offsetX
-      List(timetableEventList.days.size) { columnWidthPx * it - offsetX }
-    }
-  }
+  //endregion
 
   internal fun updateScreenConstraints(constraints: Constraints) {
     val size = IntSize(width = constraints.maxWidth, height = constraints.maxHeight)
@@ -139,15 +163,6 @@ internal class TimetableScreenState(
 }
 
 @Suppress("NOTHING_TO_INLINE")
-private inline fun TimetableEventItemLayoutInfo.isVisible(
-  screenXRange: ClosedFloatingPointRange<Float>,
-  screenYRange: ClosedFloatingPointRange<Float>
-): Boolean {
-  val xInside = leftPx.toFloat() in screenXRange ||
-      rightPx.toFloat() in screenXRange
-
-  val yInside = topPx.toFloat() in screenYRange ||
-      bottomPx.toFloat() in screenYRange
-
-  return xInside && yInside
-}
+private inline fun <T> List<T>.associateWithIndex(): Map<T, Int> =
+  withIndex()
+    .associateTo(hashMapOf()) { it.value to it.index }

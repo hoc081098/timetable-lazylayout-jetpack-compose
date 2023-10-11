@@ -53,17 +53,39 @@ val DateFormatter by lazy {
 }
 
 fun getTimetableEventItemsList(): TimetableEventList {
-  val days = (7..17)
-    .map { d ->
-      EventDay(
-        start = LocalDateTime
-          .parse("2023-09-${d.toString().padStart(2, '0')}T00:00:00")
-          .toInstant(CurrentZoneOffset),
-        end = LocalDateTime
-          .parse("2023-09-${(d + 1).toString().padStart(2, '0')}T00:00:00")
-          .toInstant(CurrentZoneOffset),
+  val days = (
+      (1..29)
+        .map { d ->
+          EventDay(
+            start = LocalDateTime
+              .parse("2023-09-${d.toString().padStart(2, '0')}T00:00:00")
+              .toInstant(CurrentZoneOffset),
+            end = LocalDateTime
+              .parse("2023-09-${(d + 1).toString().padStart(2, '0')}T00:00:00")
+              .toInstant(CurrentZoneOffset),
+          )
+        } + (1..30)
+        .map { d ->
+          EventDay(
+            start = LocalDateTime
+              .parse("2023-10-${d.toString().padStart(2, '0')}T00:00:00")
+              .toInstant(CurrentZoneOffset),
+            end = LocalDateTime
+              .parse("2023-10-${(d + 1).toString().padStart(2, '0')}T00:00:00")
+              .toInstant(CurrentZoneOffset),
+          )
+        } + (1..29)
+        .map { d ->
+          EventDay(
+            start = LocalDateTime
+              .parse("2023-11-${d.toString().padStart(2, '0')}T00:00:00")
+              .toInstant(CurrentZoneOffset),
+            end = LocalDateTime
+              .parse("2023-11-${(d + 1).toString().padStart(2, '0')}T00:00:00")
+              .toInstant(CurrentZoneOffset),
+          )
+        }
       )
-    }
     .toImmutableList()
 
 
@@ -72,11 +94,15 @@ fun getTimetableEventItemsList(): TimetableEventList {
       val formattedDay = DateFormatter.format(day.asLocalDateTime())
       var lastEnd = null as Instant?
 
-      List(10) { index ->
+      List(24) { index ->
         val delay: Duration = Duration.ofMinutes(Random.nextLong(10, 60))
         val startsAt: Instant = lastEnd?.plus(delay) ?: (day.start + delay)
         val endsAt: Instant = (startsAt + Duration.ofMinutes(Random.nextLong(30, 60)))
           .also { lastEnd = it }
+
+        if (startsAt.isAfter(day.end) || endsAt.isAfter(day.end)) {
+          return@List null
+        }
 
         TimetableEventItem(
           id = TimetableEventItem.Id(value = UUID.randomUUID().toString()),
@@ -85,7 +111,7 @@ fun getTimetableEventItemsList(): TimetableEventList {
           endsAt = endsAt,
           day = day,
         )
-      }
+      }.filterNotNull()
     }
     .toImmutableList()
 

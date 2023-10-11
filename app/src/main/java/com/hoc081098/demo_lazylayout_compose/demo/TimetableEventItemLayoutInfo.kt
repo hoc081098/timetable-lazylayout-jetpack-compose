@@ -6,7 +6,6 @@ import androidx.compose.ui.layout.Placeable
 import com.hoc081098.demo_lazylayout_compose.TimetableEventItem
 import com.hoc081098.demo_lazylayout_compose.TimetableEventList
 import java.time.temporal.ChronoUnit
-import kotlin.LazyThreadSafetyMode.NONE
 
 /**
  * Contains [Placeable] info and [TimetableEventItemLayoutInfo] for each [TimetableEventItem].
@@ -43,29 +42,40 @@ internal data class TimetableEventItemLayoutInfo(
   @Px
   private val columnWidthPx: Int,
 ) {
-  @get:Px
-  val heightPx by lazy(NONE) {
-    ChronoUnit.MINUTES
-      .between(item.startsAt, item.endsAt)
-      .toInt() * perMinuteHeightPx
-  }
+  private var cachedHeightPx: Int = -1
+  private var cachedTopPx: Int = -1
 
   @get:Px
-  val widthPx get() = columnWidthPx
+  val heightPx: Int
+    get() = if (cachedHeightPx == -1) {
+      (ChronoUnit.MINUTES
+        .between(item.startsAt, item.endsAt)
+        .toInt() * perMinuteHeightPx)
+        .also { cachedHeightPx = it }
+    } else {
+      cachedHeightPx
+    }
+
+  @get:Px
+  inline val widthPx get() = columnWidthPx
 
   @Px
   val leftPx = dayIndex * widthPx
 
   @get:Px
-  val topPx by lazy(NONE) {
-    ChronoUnit.MINUTES
-      .between(item.day.start, item.startsAt)
-      .toInt() * perMinuteHeightPx
-  }
+  val topPx: Int
+    get() = if (cachedTopPx == -1) {
+      (ChronoUnit.MINUTES
+        .between(item.day.start, item.startsAt)
+        .toInt() * perMinuteHeightPx)
+        .also { cachedTopPx = it }
+    } else {
+      cachedTopPx
+    }
 
   @get:Px
-  val rightPx get() = leftPx + widthPx
+  inline val rightPx get() = leftPx + widthPx
 
   @get:Px
-  val bottomPx get() = topPx + heightPx
+  inline val bottomPx get() = topPx + heightPx
 }
