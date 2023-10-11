@@ -1,6 +1,7 @@
 package com.hoc081098.demo_lazylayout_compose.demo
 
 import androidx.annotation.Px
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.layout.Placeable
 import com.hoc081098.demo_lazylayout_compose.TimetableEventItem
@@ -18,7 +19,7 @@ internal data class PlaceableInfo(
 /**
  * Contains layout info for each [TimetableEventItem].
  */
-@Stable
+@Immutable
 internal data class TimetableEventItemLayoutInfo(
   /**
    * The [TimetableEventItem] to be laid out.
