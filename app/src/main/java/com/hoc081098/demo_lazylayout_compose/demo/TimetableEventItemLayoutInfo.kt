@@ -45,6 +45,7 @@ internal data class TimetableEventItemLayoutInfo(
   private var cachedHeightPx: Int = -1
   private var cachedTopPx: Int = -1
 
+  @Stable
   @get:Px
   val heightPx: Int
     get() = if (cachedHeightPx == -1) {
@@ -56,12 +57,15 @@ internal data class TimetableEventItemLayoutInfo(
       cachedHeightPx
     }
 
+  @Stable
   @get:Px
   inline val widthPx get() = columnWidthPx
 
+  @Stable
   @Px
   val leftPx = dayIndex * widthPx
 
+  @Stable
   @get:Px
   val topPx: Int
     get() = if (cachedTopPx == -1) {
@@ -73,9 +77,11 @@ internal data class TimetableEventItemLayoutInfo(
       cachedTopPx
     }
 
+  @Stable
   @get:Px
   inline val rightPx get() = leftPx + widthPx
 
+  @Stable
   @get:Px
   inline val bottomPx get() = topPx + heightPx
 }

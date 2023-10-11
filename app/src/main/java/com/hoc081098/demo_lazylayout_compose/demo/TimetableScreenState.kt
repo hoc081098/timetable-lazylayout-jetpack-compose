@@ -29,12 +29,14 @@ internal class TimetableScreenState(
    * The total height of the timetable in pixels.
    */
   @Px
+  @Stable
   internal val totalHeightPx: Int
 
   /**
    * The total width of the timetable in pixels.
    */
   @Px
+  @Stable
   internal val totalWidthPx: Int
 
   /**
