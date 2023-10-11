@@ -69,4 +69,7 @@ dependencies {
   androidTestImplementation(libs.ui.test.junit4)
   debugImplementation(libs.ui.tooling)
   debugImplementation(libs.ui.test.manifest)
+
+  // FlowExt
+  implementation("io.github.hoc081098:FlowExt:0.7.2")
 }

@@ -1,10 +1,12 @@
 package com.hoc081098.demo_lazylayout_compose.demo
 
 import androidx.annotation.Px
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.unit.Constraints
@@ -13,6 +15,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import com.hoc081098.demo_lazylayout_compose.TimetableEventList
 import com.hoc081098.demo_lazylayout_compose.fastFilter
+import com.hoc081098.flowext.ThrottleConfiguration
+import com.hoc081098.flowext.throttleTime
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import java.time.Duration
 
 @Stable
@@ -104,21 +115,35 @@ internal class TimetableScreenState(
     }
   }
 
-  private fun buildVisibleTimetableEventItemLayoutInfos(timetableEventItemLayoutInfos: ArrayList<TimetableEventItemLayoutInfo>) =
-    derivedStateOf {
+  private fun buildVisibleTimetableEventItemLayoutInfos(timetableEventItemLayoutInfos: ArrayList<TimetableEventItemLayoutInfo>): MutableState<List<TimetableEventItemLayoutInfo>> {
+    val r = mutableStateOf(emptyList<TimetableEventItemLayoutInfo>())
+
+    val throttleDispatcher = Dispatchers.IO.limitedParallelism(2)
+
+    combine(
+      snapshotFlow { screenSizeState.value },
+      snapshotFlow { scrollStates.offsetX }
+        .conflate()
+        .flowOn(Dispatchers.Main.immediate)
+        .throttleTime(200, ThrottleConfiguration.LEADING)
+        .flowOn(throttleDispatcher),
+      snapshotFlow { scrollStates.offsetY }
+        .conflate()
+        .flowOn(Dispatchers.Main.immediate)
+        .throttleTime(200, ThrottleConfiguration.LEADING)
+        .flowOn(throttleDispatcher),
+    ) { size, offsetX,offsetY ->
+      println("size=$size, offsetX=$offsetX, offsetY=$offsetY")
+
       // The visible items are the items that are inside the screen.
       // It will be calculated when any of the following changes:
       // - [offsetX]
       // - [offsetY]
       // - [screenSizeState]
 
-      val size = screenSizeState.value
       if (size == IntSize.Zero) {
-        return@derivedStateOf emptyList()
+        return@combine emptyList()
       }
-
-      val offsetX = scrollStates.offsetX
-      val offsetY = scrollStates.offsetY
 
       val screenRightX = offsetX + size.width
       val screenBottomY = offsetY + size.height
@@ -137,6 +162,13 @@ internal class TimetableScreenState(
             )
       }
     }
+      .onEach {
+        r.value = it
+      }
+      .launchIn(CoroutineScope(Dispatchers.Main.immediate))
+
+    return r
+  }
   //endregion
 
   internal fun updateScreenConstraints(constraints: Constraints) {
