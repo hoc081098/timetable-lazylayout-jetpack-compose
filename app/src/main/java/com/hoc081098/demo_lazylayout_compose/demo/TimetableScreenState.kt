@@ -130,6 +130,11 @@ internal class TimetableScreenState(
     val scopeDispatcher = scope.coroutineContext[CoroutineDispatcher]!!
     val throttleDuration = 200.milliseconds
 
+    // The visible items are the items that are inside the screen.
+    // It will be calculated when any of the following changes:
+    // - [offsetX]
+    // - [offsetY]
+    // - [screenSizeState]
     combine(
       snapshotFlow { screenSizeState.value },
       snapshotFlow { scrollStates.offsetX }
@@ -142,10 +147,10 @@ internal class TimetableScreenState(
         .flowOn(throttleDispatcher),
     ) { size, offsetX, offsetY ->
       visibleTimetableEventItemLayoutInfo(
-        size,
-        offsetX,
-        offsetY,
-        timetableEventItemLayoutInfos
+        size = size,
+        offsetX = offsetX,
+        offsetY = offsetY,
+        timetableEventItemLayoutInfos = timetableEventItemLayoutInfos
       )
     }
       .onEach { visibleInfosState.value = it }
@@ -196,12 +201,6 @@ private fun visibleTimetableEventItemLayoutInfo(
   offsetY: Float,
   timetableEventItemLayoutInfos: ArrayList<TimetableEventItemLayoutInfo>
 ): List<TimetableEventItemLayoutInfo> {
-  // The visible items are the items that are inside the screen.
-  // It will be calculated when any of the following changes:
-  // - [offsetX]
-  // - [offsetY]
-  // - [screenSizeState]
-
   if (size == IntSize.Zero) {
     return emptyList()
   }
