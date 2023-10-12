@@ -110,6 +110,7 @@ fun Timetable(
   val density = LocalDensity.current
   val scope = rememberCoroutineScope()
 
+  val throttleDispatcher = rememberThrottleCoroutineDispatcher()
   val scrollStates = rememberTimetableScrollStates()
   val screenState = remember(
     timetableEventList,
@@ -127,6 +128,8 @@ fun Timetable(
         scrollStates = scrollStates,
         columnWidth = columnWidth,
         perMinuteHeight = perMinuteHeight,
+        throttleDispatcher = throttleDispatcher,
+        compositionCoroutineContext = scope.coroutineContext,
       )
     }
   }

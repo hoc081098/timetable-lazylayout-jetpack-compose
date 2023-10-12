@@ -2,6 +2,7 @@ package com.hoc081098.demo_lazylayout_compose.demo
 
 import androidx.annotation.Px
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -15,17 +16,22 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import com.hoc081098.demo_lazylayout_compose.TimetableEventList
 import com.hoc081098.demo_lazylayout_compose.fastFilter
-import com.hoc081098.flowext.ThrottleConfiguration
+import com.hoc081098.flowext.ThrottleConfiguration.LEADING_AND_TRAILING
 import com.hoc081098.flowext.throttleTime
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import java.time.Duration
+import kotlin.coroutines.CoroutineContext
+import kotlin.time.Duration.Companion.milliseconds
 
+@OptIn(ExperimentalCoroutinesApi::class, ExperimentalStdlibApi::class)
 @Stable
 internal class TimetableScreenState(
   private val timetableEventList: TimetableEventList,
@@ -33,7 +39,10 @@ internal class TimetableScreenState(
   density: Density,
   private val columnWidth: Dp,
   private val perMinuteHeight: Dp,
-) {
+  private val throttleDispatcher: CoroutineDispatcher,
+  private val compositionCoroutineContext: CoroutineContext
+) : RememberObserver {
+  private val scope: CoroutineScope = CoroutineScope(compositionCoroutineContext + Job())
   private val screenSizeState = mutableStateOf(IntSize.Zero)
 
   /**
@@ -116,58 +125,33 @@ internal class TimetableScreenState(
   }
 
   private fun buildVisibleTimetableEventItemLayoutInfos(timetableEventItemLayoutInfos: ArrayList<TimetableEventItemLayoutInfo>): MutableState<List<TimetableEventItemLayoutInfo>> {
-    val r = mutableStateOf(emptyList<TimetableEventItemLayoutInfo>())
+    val visibleInfosState = mutableStateOf(emptyList<TimetableEventItemLayoutInfo>())
 
-    val throttleDispatcher = Dispatchers.IO.limitedParallelism(2)
+    val scopeDispatcher = scope.coroutineContext[CoroutineDispatcher]!!
+    val throttleDuration = 150.milliseconds
 
     combine(
       snapshotFlow { screenSizeState.value },
       snapshotFlow { scrollStates.offsetX }
-        .conflate()
-        .flowOn(Dispatchers.Main.immediate)
-        .throttleTime(200, ThrottleConfiguration.LEADING)
+        .flowOn(scopeDispatcher)
+        .throttleTime(throttleDuration, LEADING_AND_TRAILING)
         .flowOn(throttleDispatcher),
       snapshotFlow { scrollStates.offsetY }
-        .conflate()
-        .flowOn(Dispatchers.Main.immediate)
-        .throttleTime(200, ThrottleConfiguration.LEADING)
+        .flowOn(scopeDispatcher)
+        .throttleTime(throttleDuration, LEADING_AND_TRAILING)
         .flowOn(throttleDispatcher),
-    ) { size, offsetX,offsetY ->
-      println("size=$size, offsetX=$offsetX, offsetY=$offsetY")
-
-      // The visible items are the items that are inside the screen.
-      // It will be calculated when any of the following changes:
-      // - [offsetX]
-      // - [offsetY]
-      // - [screenSizeState]
-
-      if (size == IntSize.Zero) {
-        return@combine emptyList()
-      }
-
-      val screenRightX = offsetX + size.width
-      val screenBottomY = offsetY + size.height
-
-      // filter items that are visible (or partially visible) in the screen
-      timetableEventItemLayoutInfos.fastFilter {
-        (
-            /** x is inside the screen */
-            it.leftPx.toFloat() in offsetX..screenRightX ||
-                it.rightPx.toFloat() in offsetX..screenRightX
-            )
-            && (
-            /** y is inside the screen */
-            it.topPx.toFloat() in offsetY..screenBottomY ||
-                it.bottomPx.toFloat() in offsetY..screenBottomY
-            )
-      }
+    ) { size, offsetX, offsetY ->
+      visibleTimetableEventItemLayoutInfo(
+        size,
+        offsetX,
+        offsetY,
+        timetableEventItemLayoutInfos
+      )
     }
-      .onEach {
-        r.value = it
-      }
-      .launchIn(CoroutineScope(Dispatchers.Main.immediate))
+      .onEach { visibleInfosState.value = it }
+      .launchIn(scope)
 
-    return r
+    return visibleInfosState
   }
   //endregion
 
@@ -194,6 +178,52 @@ internal class TimetableScreenState(
   internal suspend fun fling() = scrollStates.fling()
 
   internal fun resetScrollTracking() = scrollStates.resetScrollTracking()
+
+  //region RememberObserver
+  override fun onAbandoned() = scope.cancel()
+
+  override fun onForgotten() = scope.cancel()
+
+  override fun onRemembered() {
+    // Do nothing
+  }
+  //endregion
+}
+
+private fun visibleTimetableEventItemLayoutInfo(
+  size: IntSize,
+  offsetX: Float,
+  offsetY: Float,
+  timetableEventItemLayoutInfos: ArrayList<TimetableEventItemLayoutInfo>
+): List<TimetableEventItemLayoutInfo> {
+  println("filter size=$size, offsetX=$offsetX, offsetY=$offsetY")
+
+  // The visible items are the items that are inside the screen.
+  // It will be calculated when any of the following changes:
+  // - [offsetX]
+  // - [offsetY]
+  // - [screenSizeState]
+
+  if (size == IntSize.Zero) {
+    return emptyList()
+  }
+
+  val screenRightX = offsetX + size.width
+  val screenBottomY = offsetY + size.height
+
+  // filter items that are visible (or partially visible) in the screen
+  return timetableEventItemLayoutInfos.fastFilter {
+    (
+        /** x is inside the screen */
+        it.leftPx.toFloat() in offsetX..screenRightX ||
+            it.rightPx.toFloat() in offsetX..screenRightX
+        )
+        && (
+        /** y is inside the screen */
+        it.topPx.toFloat() in offsetY..screenBottomY ||
+            it.bottomPx.toFloat() in offsetY..screenBottomY
+        )
+  }
 }
 
 @Suppress("NOTHING_TO_INLINE")
