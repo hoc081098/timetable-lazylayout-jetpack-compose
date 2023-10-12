@@ -5,6 +5,10 @@ plugins {
 }
 
 android {
+  androidResources {
+    additionalParameters += "--warn-manifest-validation"
+  }
+
   namespace = "com.hoc081098.demo_lazylayout_compose"
   compileSdk = 34
 
@@ -25,6 +29,7 @@ android {
     release {
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+      signingConfig = signingConfigs.getByName("debug")
     }
   }
   compileOptions {
@@ -71,5 +76,5 @@ dependencies {
   debugImplementation(libs.ui.test.manifest)
 
   // FlowExt
-  implementation("io.github.hoc081098:FlowExt:0.7.2")
+  implementation(libs.flowExt)
 }
