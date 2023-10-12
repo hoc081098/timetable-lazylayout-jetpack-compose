@@ -128,7 +128,7 @@ internal class TimetableScreenState(
     val visibleInfosState = mutableStateOf(emptyList<TimetableEventItemLayoutInfo>())
 
     val scopeDispatcher = scope.coroutineContext[CoroutineDispatcher]!!
-    val throttleDuration = 150.milliseconds
+    val throttleDuration = 200.milliseconds
 
     combine(
       snapshotFlow { screenSizeState.value },
