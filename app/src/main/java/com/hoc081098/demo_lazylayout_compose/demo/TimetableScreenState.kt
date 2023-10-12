@@ -196,8 +196,6 @@ private fun visibleTimetableEventItemLayoutInfo(
   offsetY: Float,
   timetableEventItemLayoutInfos: ArrayList<TimetableEventItemLayoutInfo>
 ): List<TimetableEventItemLayoutInfo> {
-  println("filter size=$size, offsetX=$offsetX, offsetY=$offsetY")
-
   // The visible items are the items that are inside the screen.
   // It will be calculated when any of the following changes:
   // - [offsetX]
