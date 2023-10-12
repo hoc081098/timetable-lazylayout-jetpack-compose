@@ -2,7 +2,6 @@ package com.hoc081098.demo_lazylayout_compose.demo
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.exponentialDecay
-import androidx.compose.animation.splineBasedDecay
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.saveable.Saver
@@ -11,7 +10,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
-import androidx.compose.ui.unit.Density
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 

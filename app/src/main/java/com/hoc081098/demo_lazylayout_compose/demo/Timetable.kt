@@ -29,6 +29,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -49,6 +50,7 @@ import com.hoc081098.demo_lazylayout_compose.EventDay
 import com.hoc081098.demo_lazylayout_compose.TimetableEventItem
 import com.hoc081098.demo_lazylayout_compose.TimetableEventList
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 object TimetableDefaults {
@@ -108,6 +110,7 @@ fun Timetable(
   val density = LocalDensity.current
   val scope = rememberCoroutineScope()
 
+  val throttleDispatcher = rememberThrottleCoroutineDispatcher()
   val scrollStates = rememberTimetableScrollStates()
   val screenState = remember(
     timetableEventList,
@@ -116,27 +119,39 @@ fun Timetable(
     columnWidth,
     perMinuteHeight
   ) {
-    TimetableScreenState(
-      timetableEventList = timetableEventList,
-      density = density,
-      scrollStates = scrollStates,
-      columnWidth = columnWidth,
-      perMinuteHeight = perMinuteHeight,
-    )
+    if (timetableEventList.items.isEmpty()) {
+      null
+    } else {
+      TimetableScreenState(
+        timetableEventList = timetableEventList,
+        density = density,
+        scrollStates = scrollStates,
+        columnWidth = columnWidth,
+        perMinuteHeight = perMinuteHeight,
+        throttleDispatcher = throttleDispatcher,
+        compositionCoroutineContext = scope.coroutineContext,
+      )
+    }
   }
 
   val timelineStrokeWidthPx = density.run { lineStrokeWidth.toPx() }
-
   val flingBehavior = ScrollableDefaults.flingBehavior()
 
   val hoursScrollState = rememberScrollState()
-  LaunchedEffect(screenState.offsetY) {
-    hoursScrollState.scrollTo(screenState.offsetY.toInt())
-  }
-
   val daysScrollState = rememberScrollState()
-  LaunchedEffect(screenState.offsetX) {
-    daysScrollState.scrollTo(screenState.offsetX.toInt())
+  LaunchedEffect(hoursScrollState, daysScrollState, screenState) {
+    screenState ?: return@LaunchedEffect
+
+    launch {
+      snapshotFlow { screenState.offsetY }
+        .collectLatest { hoursScrollState.scrollTo(it.toInt()) }
+    }
+
+    launch {
+      snapshotFlow { screenState.offsetX }.collectLatest {
+        daysScrollState.scrollTo(it.toInt())
+      }
+    }
   }
 
   Row(
@@ -184,24 +199,26 @@ fun Timetable(
           .clipToBounds()
           .background(backgroundColor)
           .drawBehind {
-            screenState.timelineHorizontalLines.value.fastForEach { y ->
+            val state = screenState ?: return@drawBehind
+
+            state.timelineHorizontalLines.value.fastForEach { y ->
               drawLine(
                 color = lineColor,
                 start = Offset(0f, y),
-                end = Offset(screenState.totalWidthPx.toFloat(), y),
+                end = Offset(state.totalWidthPx.toFloat(), y),
                 strokeWidth = timelineStrokeWidthPx,
               )
             }
-            screenState.dayVerticalLines.value.fastForEach { x ->
+            state.dayVerticalLines.value.fastForEach { x ->
               drawLine(
                 color = lineColor,
                 start = Offset(x, 0f),
-                end = Offset(x, screenState.totalHeightPx.toFloat()),
+                end = Offset(x, state.totalHeightPx.toFloat()),
                 strokeWidth = timelineStrokeWidthPx,
               )
             }
           }
-          .pointerInput(Unit) {
+          .pointerInput(screenState) {
             detectDragGestures(
               onDrag = { change, dragAmount ->
                 if (change.positionChanged()) {
@@ -210,21 +227,25 @@ fun Timetable(
                 }
 
                 scope.launch {
-                  screenState.scroll(change, -dragAmount)
+                  screenState?.scroll(change, -dragAmount)
                 }
               },
               onDragEnd = {
                 scope.launch {
-                  screenState.fling()
+                  screenState?.fling()
                 }
               },
               onDragCancel = {
-                screenState.resetScrollTracking()
+                screenState?.resetScrollTracking()
               }
             )
           },
         itemProvider = itemProvider,
       ) { constraints ->
+        screenState ?: return@LazyLayout layout(constraints.maxWidth, constraints.maxHeight) {
+          // nothing to do
+        }
+
         screenState.updateScreenConstraints(constraints)
 
         // measure visible items

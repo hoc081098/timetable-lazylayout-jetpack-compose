@@ -1,12 +1,12 @@
 package com.hoc081098.demo_lazylayout_compose.demo
 
 import androidx.annotation.Px
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.layout.Placeable
 import com.hoc081098.demo_lazylayout_compose.TimetableEventItem
 import com.hoc081098.demo_lazylayout_compose.TimetableEventList
 import java.time.temporal.ChronoUnit
-import kotlin.LazyThreadSafetyMode.NONE
 
 /**
  * Contains [Placeable] info and [TimetableEventItemLayoutInfo] for each [TimetableEventItem].
@@ -19,7 +19,7 @@ internal data class PlaceableInfo(
 /**
  * Contains layout info for each [TimetableEventItem].
  */
-@Stable
+@Immutable
 internal data class TimetableEventItemLayoutInfo(
   /**
    * The [TimetableEventItem] to be laid out.
@@ -43,29 +43,46 @@ internal data class TimetableEventItemLayoutInfo(
   @Px
   private val columnWidthPx: Int,
 ) {
-  @get:Px
-  val heightPx by lazy(NONE) {
-    ChronoUnit.MINUTES
-      .between(item.startsAt, item.endsAt)
-      .toInt() * perMinuteHeightPx
-  }
+  private var cachedHeightPx: Int = -1
+  private var cachedTopPx: Int = -1
 
+  @Stable
   @get:Px
-  val widthPx get() = columnWidthPx
+  val heightPx: Int
+    get() = if (cachedHeightPx == -1) {
+      (ChronoUnit.MINUTES
+        .between(item.startsAt, item.endsAt)
+        .toInt() * perMinuteHeightPx)
+        .also { cachedHeightPx = it }
+    } else {
+      cachedHeightPx
+    }
 
+  @Stable
+  @get:Px
+  inline val widthPx get() = columnWidthPx
+
+  @Stable
   @Px
   val leftPx = dayIndex * widthPx
 
+  @Stable
   @get:Px
-  val topPx by lazy(NONE) {
-    ChronoUnit.MINUTES
-      .between(item.day.start, item.startsAt)
-      .toInt() * perMinuteHeightPx
-  }
+  val topPx: Int
+    get() = if (cachedTopPx == -1) {
+      (ChronoUnit.MINUTES
+        .between(item.day.start, item.startsAt)
+        .toInt() * perMinuteHeightPx)
+        .also { cachedTopPx = it }
+    } else {
+      cachedTopPx
+    }
 
+  @Stable
   @get:Px
-  val rightPx get() = leftPx + widthPx
+  inline val rightPx get() = leftPx + widthPx
 
+  @Stable
   @get:Px
-  val bottomPx get() = topPx + heightPx
+  inline val bottomPx get() = topPx + heightPx
 }
