@@ -1,5 +1,6 @@
 [versions]
 agp = "8.1.0"
+flowExt = "0.7.2"
 org-jetbrains-kotlin-android = "1.9.10"
 core-ktx = "1.12.0"
 junit = "4.13.2"
@@ -12,6 +13,7 @@ kotlinx-collections-immutable = "0.3.5"
 
 [libraries]
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
+flowExt = { module = "io.github.hoc081098:FlowExt", version.ref = "flowExt" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso-core" }
