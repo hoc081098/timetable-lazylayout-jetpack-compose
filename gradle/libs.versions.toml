@@ -9,7 +9,7 @@ espresso-core = "3.5.1"
 lifecycle-runtime-ktx = "2.6.2"
 activity-compose = "1.8.0"
 compose-bom = "2024.02.02"
-kotlinx-collections-immutable = "0.3.6"
+kotlinx-collections-immutable = "0.3.7"
 
 [libraries]
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
