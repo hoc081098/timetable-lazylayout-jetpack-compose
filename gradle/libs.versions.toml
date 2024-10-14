@@ -1,5 +1,5 @@
 [versions]
-agp = "8.3.0"
+agp = "8.7.1"
 flowExt = "0.8.1"
 org-jetbrains-kotlin-android = "1.9.20"
 core-ktx = "1.12.0"
